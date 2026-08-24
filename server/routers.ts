@@ -4,7 +4,7 @@ import { type UserRole, userRoleValues } from "../drizzle/schema";
 import {
   createPermissionDefinition,
   createDocumentRecord,
-  createEmailUser,
+  createSchoolOwnerAccount,
   createInAppNotification,
   getDocumentRecords,
   getInAppNotifications,
@@ -34,7 +34,6 @@ import { storagePut } from "./storage";
 import { sendSchoolEmail } from "./email";
 
 const passwordSchema = z.string().min(10, "Use at least 10 characters.").max(128);
-const displayRoles = ["school_admin", "staff", "student", "parent"] as const;
 
 const accountSummary = (user: { id: number; uid: string; name: string; email: string; role: UserRole; emailVerified: boolean; organizationId: number; campusId: number | null }) => ({
   id: user.id,
@@ -52,23 +51,18 @@ export const appRouter = router({
   auth: router({
     me: publicProcedure.query(({ ctx }) => (ctx.user ? accountSummary(ctx.user) : null)),
     signUp: publicProcedure
-      .input(z.object({ name: z.string().trim().min(2).max(180), email: z.string().email(), password: passwordSchema, role: z.enum(displayRoles).default("school_admin"), organizationId: z.number().int().positive().default(1), campusId: z.number().int().positive().optional() }))
+      .input(z.object({ schoolName: z.string().trim().min(2).max(180), name: z.string().trim().min(2).max(180), email: z.string().email(), password: passwordSchema }).strict())
       .mutation(async ({ input, ctx }) => {
         const email = normalizeEmail(input.email);
         const existing = await getUserByEmail(email);
         if (existing) throw new TRPCError({ code: "CONFLICT", message: "An account already exists for this email address." });
         const verificationToken = createOpaqueToken();
-        const user = await createEmailUser({
+        const user = await createSchoolOwnerAccount({
+          schoolName: input.schoolName,
           name: input.name,
           email,
           passwordHash: await hashPassword(input.password),
-          role: input.role,
-          organizationId: input.organizationId,
-          campusId: input.campusId ?? null,
-          emailVerified: false,
           emailVerificationToken: hashOpaqueToken(verificationToken),
-          passwordResetToken: null,
-          passwordResetExpiresAt: null,
         });
         if (!user) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Your account could not be created. Please retry." });
         const origin = typeof ctx.req.headers.origin === "string" ? ctx.req.headers.origin : "";

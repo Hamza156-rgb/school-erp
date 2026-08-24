@@ -31,3 +31,12 @@
 - [x] Provide robust loading, empty, error, confirmation, success, and permission-denied states.
 - [x] Validate responsive behavior, keyboard accessibility, visual polish, and automated tests.
 - [x] Add Cmd/Ctrl+K command search and Escape-key dismissal for the primary workspace overlays.
+- [x] QA: Reproduce and correct the student-record dialog layout defect shown in the reported screenshot.
+- [x] QA: Inspect all primary desktop routes for clipping, overlap, broken actions, and inconsistent interaction feedback.
+- [x] QA: Inspect mobile layouts and modal behavior for responsive breakage.
+- [x] QA: Ensure workspace sign-out clears the custom server-issued session before navigating away.
+- [x] QA: Gate the primary School ERP workspace behind the custom authentication session.
+- [x] QA: Gate all direct internal routes, including student, examinations, and family pages, behind the custom session.
+- [x] QA: Remove client-controlled role and organisation assignment from public account registration.
+- [x] QA: Fix mobile clipping in the examination-results summary and subject-performance table.
+- [x] QA: Run automated checks, test critical interactions, and verify the production build after remediation.

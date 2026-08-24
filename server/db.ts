@@ -1,7 +1,7 @@
 import { and, count, desc, eq, gt, sql, sum } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { nanoid } from "nanoid";
-import { admissions, attendanceRecords, documents, invoices, notifications, permissionDefinitions, rolePermissions, students, type InsertUser, type User, users } from "../drizzle/schema";
+import { admissions, attendanceRecords, campuses, documents, invoices, notifications, organizations, permissionDefinitions, rolePermissions, students, type InsertUser, type User, users } from "../drizzle/schema";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -37,6 +37,42 @@ export async function createEmailUser(values: Omit<InsertUser, "uid" | "id" | "c
   const user: InsertUser = { ...values, uid: nanoid(20) };
   await db.insert(users).values(user);
   return getUserByEmail(user.email);
+}
+
+export async function createSchoolOwnerAccount(values: {
+  schoolName: string;
+  name: string;
+  email: string;
+  passwordHash: string;
+  emailVerificationToken: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("The School ERP database is currently unavailable.");
+
+  const baseSlug = values.schoolName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "").slice(0, 80) || "school";
+  const slug = `${baseSlug}-${nanoid(8).toLowerCase()}`;
+  const campusCode = `MAIN-${nanoid(6).toUpperCase()}`;
+
+  await db.insert(organizations).values({ name: values.schoolName, slug, email: values.email });
+  const organization = await db.select().from(organizations).where(eq(organizations.slug, slug)).limit(1);
+  if (!organization[0]) throw new Error("The School ERP organization could not be created.");
+
+  await db.insert(campuses).values({ organizationId: organization[0].id, name: "Main Campus", code: campusCode });
+  const campus = await db.select().from(campuses).where(and(eq(campuses.organizationId, organization[0].id), eq(campuses.code, campusCode))).limit(1);
+  if (!campus[0]) throw new Error("The School ERP campus could not be created.");
+
+  return createEmailUser({
+    name: values.name,
+    email: values.email,
+    passwordHash: values.passwordHash,
+    role: "school_owner",
+    organizationId: organization[0].id,
+    campusId: campus[0].id,
+    emailVerified: false,
+    emailVerificationToken: values.emailVerificationToken,
+    passwordResetToken: null,
+    passwordResetExpiresAt: null,
+  });
 }
 
 export async function updateUserSecurity(id: number, values: Partial<Pick<User, "passwordHash" | "emailVerified" | "emailVerificationToken" | "passwordResetToken" | "passwordResetExpiresAt" | "lastSignedIn">>) {

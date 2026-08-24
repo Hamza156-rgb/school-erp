@@ -1,7 +1,8 @@
+import { useAuth } from "@/_core/hooks/useAuth";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { lazy, Suspense } from "react";
-import { Route, Switch } from "wouter";
+import { lazy, Suspense, useEffect } from "react";
+import { Route, Switch, useLocation } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 
@@ -14,6 +15,35 @@ const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const StudentProfile = lazy(() => import("./pages/StudentProfile"));
 const VerifyEmail = lazy(() => import("./pages/VerifyEmail"));
 
+function SecureSessionGate({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, loading } = useAuth();
+  const [, navigate] = useLocation();
+
+  useEffect(() => {
+    if (!loading && !isAuthenticated) navigate("/sign-in", { replace: true });
+  }, [isAuthenticated, loading, navigate]);
+
+  if (loading || !isAuthenticated) {
+    return <div className="grid min-h-screen place-items-center bg-cloud text-xs font-bold text-slate-500">Checking your secure school session…</div>;
+  }
+
+  return <>{children}</>;
+}
+
+function ProtectedRoutes() {
+  return (
+    <SecureSessionGate>
+      <Switch>
+        <Route path="/access-denied" component={AccessDenied} />
+        <Route path="/student-profile" component={StudentProfile} />
+        <Route path="/examinations" component={Examinations} />
+        <Route path="/portal" component={Portal} />
+        <Route component={Home} />
+      </Switch>
+    </SecureSessionGate>
+  );
+}
+
 export default function App() {
   return (
     <ErrorBoundary>
@@ -22,13 +52,9 @@ export default function App() {
           <Suspense fallback={<div className="grid min-h-screen place-items-center bg-cloud text-xs font-bold text-slate-500">Loading School ERP…</div>}>
             <Switch>
               <Route path="/sign-in" component={Auth} />
-              <Route path="/access-denied" component={AccessDenied} />
               <Route path="/verify-email" component={VerifyEmail} />
               <Route path="/reset-password" component={ResetPassword} />
-              <Route path="/student-profile" component={StudentProfile} />
-              <Route path="/examinations" component={Examinations} />
-              <Route path="/portal" component={Portal} />
-              <Route path="/" component={Home} />
+              <Route component={ProtectedRoutes} />
             </Switch>
           </Suspense>
           <Toaster richColors position="top-right" />
