@@ -23,7 +23,7 @@ export default function Examinations() {
               <h1 className="mt-2 font-display text-3xl font-extrabold tracking-[-.06em]">Results centre</h1>
               <p className="mt-1 text-sm text-blue-200">Grade 10 A · Academic session 2025–26</p>
             </div>
-            <Button className="h-10 w-full rounded-xl bg-white text-xs font-bold text-navy hover:bg-blue-50 sm:w-auto">
+            <Button onClick={() => window.print()} className="h-10 w-full rounded-xl bg-white text-xs font-bold text-navy hover:bg-blue-50 sm:w-auto">
               <Download className="mr-1.5 h-4 w-4" />Print report cards
             </Button>
           </div>

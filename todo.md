@@ -42,3 +42,11 @@
 - [x] QA: Run automated checks, test critical interactions, and verify the production build after remediation.
 - [x] Expand the desktop School ERP sign-in page to use the full browser width without excessive outer margins.
 - [x] Verify the expanded sign-in composition remains responsive and usable on mobile.
+- [x] Audit and connect visible primary buttons and card actions across Admissions, Staff, Examinations, Finance, and Notices.
+- [x] Add accessible show/hide password controls to authentication and reset-password fields.
+- [x] Add clear success, cancellation, and placeholder feedback for each newly connected action.
+- [x] Validate the connected controls on desktop and mobile and run regression checks.
+- [x] Validate the newly connected Admissions, Staff, Finance, and Notices dialog wiring and success/cancel feedback paths.
+- [x] Add automated interaction coverage for the shared workspace action dialog, including validation, cancellation, and successful submission.
+- [x] Add module-entry interaction tests proving Admissions, Staff, Finance, and Notices actions open the correct shared dialog.
+- [x] Add end-to-end interaction coverage from module navigation through action-dialog cancellation and successful submission.
