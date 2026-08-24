@@ -15,6 +15,7 @@
 - [x] Improve cross-module navigation so student, academic, and family experiences are reachable from core workflow actions, including family balances from Finance.
 - [x] Add a reusable polished in-app confirmation dialog for sensitive workspace actions, including guardian attendance follow-ups.
 - [x] Add a protected live dashboard-summary procedure for operational counts and outstanding fee balances.
+- [x] Split secondary route bundles to reduce the School ERP initial production payload.
 - [x] Replace all remaining OAuth-specific dashboard access behavior with the custom School ERP session flow.
 - [x] Build the executive dashboard with metrics, attention alerts, charts, activities, and quick actions.
 - [x] Build admissions and applicant-tracking experiences with enrollment and document status.
