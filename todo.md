@@ -1,0 +1,22 @@
+# Project TODO
+
+- [x] Replace the starter screen with an elegant responsive School ERP application shell.
+- [x] Establish the School ERP domain model for organizations, campuses, academic sessions, users, and role permissions.
+- [x] Implement an email-and-password custom authentication foundation without Manus OAuth.
+- [x] Add role-aware access patterns for administrators, staff, students, and parents.
+- [ ] Add a configurable role-permission catalogue and custom-role mappings, then enforce them in module procedures.
+- [ ] Complete the custom authentication experience with sign-in, registration, verification, reset, and a configured email delivery pathway.
+- [x] Replace all remaining OAuth-specific dashboard access behavior with the custom School ERP session flow.
+- [x] Build the executive dashboard with metrics, attention alerts, charts, activities, and quick actions.
+- [ ] Build admissions and applicant-tracking experiences with enrollment and document status.
+- [ ] Build student information, class placement, family context, and student profile experiences.
+- [ ] Build academic operations for classes, sections, subjects, timetables, examinations, and results.
+- [ ] Build daily student and staff attendance workflows with concise reports.
+- [ ] Build invoice, collection, balances, dues, and family-facing fee experiences.
+- [ ] Build staff, notices, and parent/student portal access experiences.
+- [ ] Establish secure document metadata and retrieval design for admissions and student records.
+- [ ] Establish in-app notification workflows for attendance, fees, admissions, and notices.
+- [x] Add role-protected document metadata, secure storage upload, and retrieval procedures for admission and student workflows.
+- [x] Add a role-protected in-app notification queue for attendance, fee, admission, and notice events.
+- [ ] Provide robust loading, empty, error, confirmation, success, and permission-denied states.
+- [ ] Validate responsive behavior, keyboard accessibility, visual polish, and automated tests.
