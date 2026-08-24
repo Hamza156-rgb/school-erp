@@ -40,3 +40,5 @@
 - [x] QA: Remove client-controlled role and organisation assignment from public account registration.
 - [x] QA: Fix mobile clipping in the examination-results summary and subject-performance table.
 - [x] QA: Run automated checks, test critical interactions, and verify the production build after remediation.
+- [x] Expand the desktop School ERP sign-in page to use the full browser width without excessive outer margins.
+- [x] Verify the expanded sign-in composition remains responsive and usable on mobile.
