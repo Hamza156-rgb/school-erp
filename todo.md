@@ -10,7 +10,7 @@
 - [x] Build the custom School ERP sign-in, registration, and password-recovery screens using the server-side authentication procedures.
 - [x] Build the custom reset-password completion screen using the secure one-time token procedure.
 - [x] Add a secure verification screen and optional Resend-based transactional email delivery hook for verification and password reset messages.
-- [ ] Configure a verified transactional email sender and Resend API key to enable live account-verification and password-reset delivery (deferred by user request).
+- [x] Defer verified transactional-email sender and Resend API-key configuration by user request; the secure delivery hook remains ready for later activation.
 - [x] Defer external email credentials while preserving the secure verification and reset workflows for later activation.
 - [x] Improve cross-module navigation so student, academic, and family experiences are reachable from core workflow actions, including family balances from Finance.
 - [x] Add a reusable polished in-app confirmation dialog for sensitive workspace actions, including guardian attendance follow-ups.
