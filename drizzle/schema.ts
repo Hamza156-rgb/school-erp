@@ -90,6 +90,30 @@ export const users = mysqlTable(
   ]
 );
 
+export const permissionDefinitions = mysqlTable("permissionDefinitions", {
+  id: int("id").autoincrement().primaryKey(),
+  code: varchar("code", { length: 120 }).notNull().unique(),
+  module: varchar("module", { length: 80 }).notNull(),
+  action: varchar("action", { length: 40 }).notNull(),
+  label: varchar("label", { length: 180 }).notNull(),
+  description: varchar("description", { length: 500 }),
+});
+
+export const rolePermissions = mysqlTable(
+  "rolePermissions",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    organizationId: int("organizationId").notNull(),
+    role: mysqlEnum("role", userRoleValues).notNull(),
+    permissionId: int("permissionId").notNull(),
+    isGranted: boolean("isGranted").default(true).notNull(),
+  },
+  table => [
+    uniqueIndex("role_permissions_unique_idx").on(table.organizationId, table.role, table.permissionId),
+    index("role_permissions_organization_role_idx").on(table.organizationId, table.role),
+  ]
+);
+
 export const classes = mysqlTable(
   "classes",
   {

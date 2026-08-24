@@ -2,6 +2,7 @@ import { UNAUTHED_ERR_MSG } from "@shared/const";
 import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 import type { UserRole } from "../../drizzle/schema";
+import { hasGrantedPermission } from "../db";
 import type { TrpcContext } from "./context";
 
 const t = initTRPC.context<TrpcContext>().create({ transformer: superjson });
@@ -26,3 +27,13 @@ export function roleProcedure(...roles: UserRole[]) {
 }
 
 export const adminProcedure = roleProcedure("super_admin", "school_owner", "school_admin");
+
+export function permissionProcedure(permissionCode: string) {
+  return protectedProcedure.use(async ({ ctx, next }) => {
+    const fullAccessRoles: UserRole[] = ["super_admin", "school_owner", "school_admin"];
+    if (!fullAccessRoles.includes(ctx.user.role) && !(await hasGrantedPermission(ctx.user.organizationId, ctx.user.role, permissionCode))) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "You do not have permission to perform this action." });
+    }
+    return next({ ctx });
+  });
+}

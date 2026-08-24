@@ -2,15 +2,20 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { type UserRole, userRoleValues } from "../drizzle/schema";
 import {
+  createPermissionDefinition,
   createDocumentRecord,
   createEmailUser,
   createInAppNotification,
   getDocumentRecords,
   getInAppNotifications,
+  getRolePermissionGrants,
+  getDashboardSummary,
+  listPermissionDefinitions,
   getUserByEmail,
   getUserByValidResetToken,
   getUserByVerificationToken,
   markNotificationRead,
+  setRolePermissionGrant,
   updateUserSecurity,
 } from "./db";
 import {
@@ -24,8 +29,9 @@ import {
   verifyPassword,
 } from "./customAuth";
 import { systemRouter } from "./_core/systemRouter";
-import { adminProcedure, protectedProcedure, publicProcedure, router } from "./_core/trpc";
+import { adminProcedure, permissionProcedure, protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import { storagePut } from "./storage";
+import { sendSchoolEmail } from "./email";
 
 const passwordSchema = z.string().min(10, "Use at least 10 characters.").max(128);
 const displayRoles = ["school_admin", "staff", "student", "parent"] as const;
@@ -47,7 +53,7 @@ export const appRouter = router({
     me: publicProcedure.query(({ ctx }) => (ctx.user ? accountSummary(ctx.user) : null)),
     signUp: publicProcedure
       .input(z.object({ name: z.string().trim().min(2).max(180), email: z.string().email(), password: passwordSchema, role: z.enum(displayRoles).default("school_admin"), organizationId: z.number().int().positive().default(1), campusId: z.number().int().positive().optional() }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
         const email = normalizeEmail(input.email);
         const existing = await getUserByEmail(email);
         if (existing) throw new TRPCError({ code: "CONFLICT", message: "An account already exists for this email address." });
@@ -65,7 +71,16 @@ export const appRouter = router({
           passwordResetExpiresAt: null,
         });
         if (!user) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Your account could not be created. Please retry." });
-        return { success: true, account: accountSummary(user), nextStep: "verify_email" as const };
+        const origin = typeof ctx.req.headers.origin === "string" ? ctx.req.headers.origin : "";
+        const verificationUrl = origin ? `${origin}/verify-email?token=${encodeURIComponent(verificationToken)}` : "";
+        const deliveryConfigured = verificationUrl
+          ? await sendSchoolEmail({
+              to: user.email,
+              subject: "Verify your School ERP email",
+              html: `<p>Hello ${user.name},</p><p>Verify your School ERP email address by using this secure link:</p><p><a href="${verificationUrl}">Verify email address</a></p><p>If you did not create this account, you can ignore this message.</p>`,
+            })
+          : false;
+        return { success: true, account: accountSummary(user), nextStep: "verify_email" as const, deliveryConfigured };
       }),
     signIn: publicProcedure
       .input(z.object({ email: z.string().email(), password: z.string().min(1) }))
@@ -86,16 +101,26 @@ export const appRouter = router({
     }),
     requestPasswordReset: publicProcedure
       .input(z.object({ email: z.string().email() }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
         const user = await getUserByEmail(normalizeEmail(input.email));
+        let deliveryConfigured = false;
         if (user) {
           const resetToken = createOpaqueToken();
           await updateUserSecurity(user.id, {
             passwordResetToken: hashOpaqueToken(resetToken),
             passwordResetExpiresAt: new Date(Date.now() + 60 * 60 * 1000),
           });
+          const origin = typeof ctx.req.headers.origin === "string" ? ctx.req.headers.origin : "";
+          const resetUrl = origin ? `${origin}/reset-password?token=${encodeURIComponent(resetToken)}` : "";
+          if (resetUrl) {
+            deliveryConfigured = await sendSchoolEmail({
+              to: user.email,
+              subject: "Reset your School ERP password",
+              html: `<p>Hello ${user.name},</p><p>Use this secure link to reset your password. It expires in one hour:</p><p><a href="${resetUrl}">Reset password</a></p>`,
+            });
+          }
         }
-        return { success: true } as const;
+        return { success: true, deliveryConfigured } as const;
       }),
     resetPassword: publicProcedure
       .input(z.object({ token: z.string().min(20), password: passwordSchema }))
@@ -118,7 +143,7 @@ export const appRouter = router({
     list: protectedProcedure
       .input(z.object({ ownerType: z.enum(["admission", "student", "staff", "guardian"]), ownerId: z.number().int().positive() }))
       .query(({ ctx, input }) => getDocumentRecords(input.ownerType, input.ownerId, ctx.user.organizationId)),
-    upload: adminProcedure
+    upload: permissionProcedure("documents.upload")
       .input(z.object({ ownerType: z.enum(["admission", "student", "staff", "guardian"]), ownerId: z.number().int().positive(), label: z.string().trim().min(2).max(120), filename: z.string().trim().min(1).max(255), contentType: z.string().trim().min(3).max(150), base64Data: z.string().min(4) }))
       .mutation(async ({ ctx, input }) => {
         const buffer = Buffer.from(input.base64Data, "base64");
@@ -137,12 +162,27 @@ export const appRouter = router({
       await markNotificationRead(input.notificationId, ctx.user.id);
       return { success: true } as const;
     }),
-    queue: adminProcedure
+    queue: permissionProcedure("notifications.queue")
       .input(z.object({ userId: z.number().int().positive(), type: z.enum(["attendance_flag", "fee_reminder", "admission_decision", "notice_posted"]), title: z.string().trim().min(2).max(180), content: z.string().trim().min(2).max(3000), actionUrl: z.string().max(500).optional() }))
       .mutation(async ({ input }) => {
         await createInAppNotification({ userId: input.userId, type: input.type, title: input.title, content: input.content, actionUrl: input.actionUrl ?? null, isRead: false });
         return { success: true } as const;
       }),
+  }),
+  access: router({
+    catalogue: adminProcedure.query(() => listPermissionDefinitions()),
+    grants: adminProcedure.input(z.object({ role: z.enum(userRoleValues) })).query(({ ctx, input }) => getRolePermissionGrants(ctx.user.organizationId, input.role)),
+    definePermission: adminProcedure.input(z.object({ code: z.string().regex(/^[a-z]+(?:\.[a-z_]+)+$/), module: z.string().trim().min(2).max(80), action: z.string().trim().min(2).max(40), label: z.string().trim().min(2).max(180), description: z.string().trim().max(500).optional() })).mutation(async ({ input }) => {
+      await createPermissionDefinition({ ...input, description: input.description ?? null });
+      return { success: true } as const;
+    }),
+    setGrant: adminProcedure.input(z.object({ role: z.enum(userRoleValues), permissionCode: z.string().trim().min(3).max(120), isGranted: z.boolean() })).mutation(async ({ ctx, input }) => {
+      await setRolePermissionGrant(ctx.user.organizationId, input.role, input.permissionCode, input.isGranted);
+      return { success: true } as const;
+    }),
+  }),
+  dashboard: router({
+    summary: protectedProcedure.query(({ ctx }) => getDashboardSummary(ctx.user.organizationId, ctx.user.campusId)),
   }),
 });
 

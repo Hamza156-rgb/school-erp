@@ -1,7 +1,7 @@
-import { and, desc, eq, gt } from "drizzle-orm";
+import { and, count, desc, eq, gt, sql, sum } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { nanoid } from "nanoid";
-import { documents, notifications, type InsertUser, type User, users } from "../drizzle/schema";
+import { admissions, attendanceRecords, documents, invoices, notifications, permissionDefinitions, rolePermissions, students, type InsertUser, type User, users } from "../drizzle/schema";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -91,4 +91,66 @@ export async function markNotificationRead(notificationId: number, userId: numbe
   const db = await getDb();
   if (!db) throw new Error("The School ERP database is currently unavailable.");
   await db.update(notifications).set({ isRead: true }).where(and(eq(notifications.id, notificationId), eq(notifications.userId, userId)));
+}
+
+export async function hasGrantedPermission(organizationId: number, role: User["role"], permissionCode: string) {
+  const db = await getDb();
+  if (!db) return false;
+  const result = await db
+    .select({ isGranted: rolePermissions.isGranted })
+    .from(rolePermissions)
+    .innerJoin(permissionDefinitions, eq(rolePermissions.permissionId, permissionDefinitions.id))
+    .where(and(eq(rolePermissions.organizationId, organizationId), eq(rolePermissions.role, role), eq(permissionDefinitions.code, permissionCode)))
+    .limit(1);
+  return result[0]?.isGranted ?? false;
+}
+
+export async function listPermissionDefinitions() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(permissionDefinitions).orderBy(permissionDefinitions.module, permissionDefinitions.action);
+}
+
+export async function getRolePermissionGrants(organizationId: number, role: User["role"]) {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select({ code: permissionDefinitions.code, label: permissionDefinitions.label, module: permissionDefinitions.module, action: permissionDefinitions.action, isGranted: rolePermissions.isGranted })
+    .from(rolePermissions)
+    .innerJoin(permissionDefinitions, eq(rolePermissions.permissionId, permissionDefinitions.id))
+    .where(and(eq(rolePermissions.organizationId, organizationId), eq(rolePermissions.role, role)))
+    .orderBy(permissionDefinitions.module, permissionDefinitions.action);
+}
+
+export async function setRolePermissionGrant(organizationId: number, role: User["role"], permissionCode: string, isGranted: boolean) {
+  const db = await getDb();
+  if (!db) throw new Error("The School ERP database is currently unavailable.");
+  const permission = await db.select().from(permissionDefinitions).where(eq(permissionDefinitions.code, permissionCode)).limit(1);
+  const permissionId = permission[0]?.id;
+  if (!permissionId) throw new Error("The requested permission definition was not found.");
+  await db.insert(rolePermissions).values({ organizationId, role, permissionId, isGranted }).onDuplicateKeyUpdate({ set: { isGranted } });
+}
+
+export async function createPermissionDefinition(values: typeof permissionDefinitions.$inferInsert) {
+  const db = await getDb();
+  if (!db) throw new Error("The School ERP database is currently unavailable.");
+  await db.insert(permissionDefinitions).values(values).onDuplicateKeyUpdate({ set: { module: values.module, action: values.action, label: values.label, description: values.description } });
+}
+
+export async function getDashboardSummary(organizationId: number, campusId: number | null) {
+  const db = await getDb();
+  if (!db) return { activeStudents: 0, openAdmissions: 0, outstandingBalance: 0, attendanceRecords: 0 };
+  const campusFilter = campusId ? eq(students.campusId, campusId) : undefined;
+  const [studentCount, admissionCount, balance, attendanceCount] = await Promise.all([
+    db.select({ value: count() }).from(students).where(campusFilter),
+    db.select({ value: count() }).from(admissions).where(campusId ? eq(admissions.campusId, campusId) : undefined),
+    db.select({ value: sum(sql`(${invoices.amount} - ${invoices.paidAmount})`) }).from(invoices).where(campusId ? eq(invoices.campusId, campusId) : undefined),
+    db.select({ value: count() }).from(attendanceRecords).where(campusId ? eq(attendanceRecords.campusId, campusId) : undefined),
+  ]);
+  return {
+    activeStudents: Number(studentCount[0]?.value ?? 0),
+    openAdmissions: Number(admissionCount[0]?.value ?? 0),
+    outstandingBalance: Number(balance[0]?.value ?? 0),
+    attendanceRecords: Number(attendanceCount[0]?.value ?? 0),
+  };
 }

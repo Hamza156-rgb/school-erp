@@ -4,19 +4,29 @@
 - [x] Establish the School ERP domain model for organizations, campuses, academic sessions, users, and role permissions.
 - [x] Implement an email-and-password custom authentication foundation without Manus OAuth.
 - [x] Add role-aware access patterns for administrators, staff, students, and parents.
-- [ ] Add a configurable role-permission catalogue and custom-role mappings, then enforce them in module procedures.
-- [ ] Complete the custom authentication experience with sign-in, registration, verification, reset, and a configured email delivery pathway.
+- [x] Add a configurable role-permission catalogue and custom-role mappings, then enforce them in module procedures.
+- [x] Provide administrator procedures to define permissions and configure organisation-specific role grants.
+- [x] Complete the custom authentication experience with sign-in, registration, verification, and reset flows; retain an optional transactional-email hook for later activation.
+- [x] Build the custom School ERP sign-in, registration, and password-recovery screens using the server-side authentication procedures.
+- [x] Build the custom reset-password completion screen using the secure one-time token procedure.
+- [x] Add a secure verification screen and optional Resend-based transactional email delivery hook for verification and password reset messages.
+- [ ] Configure a verified transactional email sender and Resend API key to enable live account-verification and password-reset delivery (deferred by user request).
+- [x] Defer external email credentials while preserving the secure verification and reset workflows for later activation.
+- [x] Improve cross-module navigation so student, academic, and family experiences are reachable from core workflow actions, including family balances from Finance.
+- [x] Add a reusable polished in-app confirmation dialog for sensitive workspace actions, including guardian attendance follow-ups.
+- [x] Add a protected live dashboard-summary procedure for operational counts and outstanding fee balances.
 - [x] Replace all remaining OAuth-specific dashboard access behavior with the custom School ERP session flow.
 - [x] Build the executive dashboard with metrics, attention alerts, charts, activities, and quick actions.
-- [ ] Build admissions and applicant-tracking experiences with enrollment and document status.
-- [ ] Build student information, class placement, family context, and student profile experiences.
-- [ ] Build academic operations for classes, sections, subjects, timetables, examinations, and results.
-- [ ] Build daily student and staff attendance workflows with concise reports.
-- [ ] Build invoice, collection, balances, dues, and family-facing fee experiences.
-- [ ] Build staff, notices, and parent/student portal access experiences.
-- [ ] Establish secure document metadata and retrieval design for admissions and student records.
-- [ ] Establish in-app notification workflows for attendance, fees, admissions, and notices.
+- [x] Build admissions and applicant-tracking experiences with enrollment and document status.
+- [x] Build student information, class placement, family context, and student profile experiences.
+- [x] Build academic operations for classes, sections, subjects, timetables, examinations, and results.
+- [x] Build daily student and staff attendance workflows with concise reports.
+- [x] Build invoice, collection, balances, dues, and family-facing fee experiences.
+- [x] Build staff, notices, and parent/student portal access experiences.
+- [x] Establish secure document metadata and retrieval design for admissions and student records.
+- [x] Establish in-app notification workflows for attendance, fees, admissions, and notices.
 - [x] Add role-protected document metadata, secure storage upload, and retrieval procedures for admission and student workflows.
 - [x] Add a role-protected in-app notification queue for attendance, fee, admission, and notice events.
-- [ ] Provide robust loading, empty, error, confirmation, success, and permission-denied states.
-- [ ] Validate responsive behavior, keyboard accessibility, visual polish, and automated tests.
+- [x] Provide robust loading, empty, error, confirmation, success, and permission-denied states.
+- [x] Validate responsive behavior, keyboard accessibility, visual polish, and automated tests.
+- [x] Add Cmd/Ctrl+K command search and Escape-key dismissal for the primary workspace overlays.
