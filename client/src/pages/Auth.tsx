@@ -11,14 +11,14 @@ function Brand() {
 }
 
 export default function Auth() {
-  const [mode, setMode] = useState<Mode>("signIn");
+  const [mode, setMode] = useState<Mode>(() => new URLSearchParams(window.location.search).get("mode") === "signup" ? "signUp" : "signIn");
   const [name, setName] = useState("");
   const [schoolName, setSchoolName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [notice, setNotice] = useState("");
-  const signIn = trpc.auth.signIn.useMutation({ onSuccess: () => { window.location.href = "/"; } });
+  const signIn = trpc.auth.signIn.useMutation({ onSuccess: () => { window.location.href = "/dashboard"; } });
   const signUp = trpc.auth.signUp.useMutation({ onSuccess: (data) => { setMode("signIn"); setNotice(data.deliveryConfigured ? "Your account was created. Check your email to verify it, then sign in." : "Your account was created. Email delivery must be configured before the verification message can be sent."); } });
   const recover = trpc.auth.requestPasswordReset.useMutation({ onSuccess: (data) => setNotice(data.deliveryConfigured ? "If that address is registered, a reset link has been sent." : "If that address is registered, a reset link is ready once email delivery is configured.") });
   const error = signIn.error?.message || signUp.error?.message || recover.error?.message;

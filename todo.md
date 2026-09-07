@@ -42,6 +42,16 @@
 - [x] QA: Run automated checks, test critical interactions, and verify the production build after remediation.
 - [x] Expand the desktop School ERP sign-in page to use the full browser width without excessive outer margins.
 - [x] Verify the expanded sign-in composition remains responsive and usable on mobile.
+- [x] Add a public Northstar landing page at the root route with clear product positioning and entry points.
+- [x] Add explicit desktop CTA coverage for both Sign in and Create workspace.
+- [x] Add explicit mobile menu coverage for both Sign in and Create workspace CTAs.
+- [x] Keep the ERP dashboard, internal records, and family portal behind the custom session gate.
+- [x] Validate public-home navigation and responsive presentation on desktop and mobile.
+- [x] Exercise desktop landing-page section links and verify hash navigation targets.
+- [x] Exercise mobile-menu section links and verify the menu closes after navigation.
+- [x] QA: Remove noisy zero-size chart warnings from the client interaction test environment without changing production chart behavior.
+- [x] Validate public landing-page Sign in and Create workspace CTAs route correctly on desktop.
+- [x] Validate public landing-page hamburger navigation and CTA routing on mobile.
 - [x] Audit and connect visible primary buttons and card actions across Admissions, Staff, Examinations, Finance, and Notices.
 - [x] Add accessible show/hide password controls to authentication and reset-password fields.
 - [x] Add clear success, cancellation, and placeholder feedback for each newly connected action.

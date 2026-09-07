@@ -9,6 +9,24 @@ vi.mock("sonner", () => ({
   toast: { error: vi.fn(), success: vi.fn(), info: vi.fn() },
 }));
 
+vi.mock("recharts", () => ({
+  ResponsiveContainer: () => null,
+  AreaChart: () => null,
+  Area: () => null,
+  BarChart: () => null,
+  Bar: () => null,
+  CartesianGrid: () => null,
+  Cell: () => null,
+  Legend: () => null,
+  Line: () => null,
+  LineChart: () => null,
+  Pie: () => null,
+  PieChart: () => null,
+  Tooltip: () => null,
+  XAxis: () => null,
+  YAxis: () => null,
+}));
+
 vi.mock("@/_core/hooks/useAuth", () => ({
   useAuth: () => ({ logout: vi.fn() }),
 }));

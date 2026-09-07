@@ -13,7 +13,7 @@ export default function Examinations() {
   return (
     <main className="min-h-screen bg-cloud p-4 sm:p-7">
       <div className="mx-auto max-w-5xl">
-        <button onClick={() => { window.location.href = "/"; }} className="mb-5 inline-flex items-center gap-1 text-xs font-bold text-slate-500 hover:text-navy">
+        <button onClick={() => { window.location.href = "/dashboard"; }} className="mb-5 inline-flex items-center gap-1 text-xs font-bold text-slate-500 hover:text-navy">
           <ArrowLeft className="h-3.5 w-3.5" />Back to workspace
         </button>
         <section className="soft-card overflow-hidden rounded-[24px] bg-white">
