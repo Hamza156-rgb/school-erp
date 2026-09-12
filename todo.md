@@ -56,7 +56,16 @@
 - [x] Add accessible show/hide password controls to authentication and reset-password fields.
 - [x] Add clear success, cancellation, and placeholder feedback for each newly connected action.
 - [x] Validate the connected controls on desktop and mobile and run regression checks.
+- [x] QA: Collapse the dashboard sidebar on mobile so the main workspace is not pushed off-screen.
+- [x] QA: Prevent horizontal overflow in the mobile dashboard shell and header.
+- [x] QA: Reposition the account menu so it stays within the mobile viewport and does not cover navigation.
+- [x] QA: Revalidate dashboard layout at mobile and desktop breakpoints after the responsive fixes.
+- [x] QA: Capture post-fix desktop visual validation for the protected dashboard shell.
+- [x] QA: Add regression coverage for mobile drawer and account-menu interactions.
 - [x] Validate the newly connected Admissions, Staff, Finance, and Notices dialog wiring and success/cancel feedback paths.
 - [x] Add automated interaction coverage for the shared workspace action dialog, including validation, cancellation, and successful submission.
 - [x] Add module-entry interaction tests proving Admissions, Staff, Finance, and Notices actions open the correct shared dialog.
 - [x] Add end-to-end interaction coverage from module navigation through action-dialog cancellation and successful submission.
+- [x] QA follow-up: Exercise the rendered mobile drawer open, overlay dismissal, and Escape-key dismissal behavior.
+- [x] QA follow-up: Exercise the rendered sidebar account trigger and verify its menu items appear without changing the active workspace view.
+- [x] QA follow-up: Replace source-string-only responsive assertions with true jsdom interaction coverage.
