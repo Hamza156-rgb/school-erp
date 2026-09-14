@@ -189,6 +189,11 @@ export async function getSchoolSettings(organizationId: number, preferredCampusI
   return { organization, campuses: organizationCampuses, selectedCampusId: selectedCampus?.id ?? null, currentSession, currentSessions };
 }
 
+export function assertCampusBelongsToOrganization(campus: { organizationId: number } | undefined, organizationId: number) {
+  if (!campus || campus.organizationId !== organizationId) throw new Error("The selected campus does not belong to this school.");
+  return campus;
+}
+
 export async function updateSchoolSettings(values: {
   organizationId: number;
   campusId: number;
@@ -199,7 +204,7 @@ export async function updateSchoolSettings(values: {
   const db = await getDb();
   if (!db) throw new Error("The School ERP database is currently unavailable.");
   const campus = (await db.select().from(campuses).where(and(eq(campuses.id, values.campusId), eq(campuses.organizationId, values.organizationId))).limit(1))[0];
-  if (!campus) throw new Error("The selected campus does not belong to this school.");
+  assertCampusBelongsToOrganization(campus, values.organizationId);
   await db.update(organizations).set(values.organization).where(eq(organizations.id, values.organizationId));
   await db.update(campuses).set(values.campus).where(and(eq(campuses.id, values.campusId), eq(campuses.organizationId, values.organizationId)));
   if (values.session) {
@@ -217,7 +222,7 @@ export async function updateUserCampus(userId: number, organizationId: number, c
   const db = await getDb();
   if (!db) throw new Error("The School ERP database is currently unavailable.");
   const campus = (await db.select().from(campuses).where(and(eq(campuses.id, campusId), eq(campuses.organizationId, organizationId))).limit(1))[0];
-  if (!campus) throw new Error("The selected campus does not belong to this school.");
+  assertCampusBelongsToOrganization(campus, organizationId);
   await db.update(users).set({ campusId }).where(and(eq(users.id, userId), eq(users.organizationId, organizationId)));
   return campus;
 }

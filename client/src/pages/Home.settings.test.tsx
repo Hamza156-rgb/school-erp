@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   update: vi.fn(),
+  updateOptions: null as { onError?: (error: Error) => void } | null,
   setCurrentCampus: vi.fn(),
   invalidate: vi.fn().mockResolvedValue(undefined),
   settingsData: { organization: { name: "Northstar Academy", email: "admin@northstar.edu", phone: "+1 555 0100", address: "1 Academy Way" }, campuses: [{ id: 12, name: "North Campus", code: "NORTH", phone: "+1 555 0101", address: "1 North Avenue" }, { id: 13, name: "South Campus", code: "SOUTH", phone: "+1 555 0102", address: "2 South Avenue" }], selectedCampusId: 12, currentSessions: [{ id: 1, campusId: 12, name: "2026–27", startsOn: new Date("2026-08-01T00:00:00.000Z"), endsOn: new Date("2027-06-30T00:00:00.000Z"), isCurrent: true }], currentSession: null },
@@ -19,7 +20,7 @@ vi.mock("@/lib/trpc", () => ({
     useUtils: () => ({ settings: { get: { invalidate: mocks.invalidate } }, auth: { me: { invalidate: mocks.invalidate } } }),
     settings: {
       get: { useQuery: () => ({ data: mocks.settingsData, isLoading: false, isError: false, refetch: vi.fn() }) },
-      update: { useMutation: () => ({ mutate: mocks.update, isPending: false }) },
+      update: { useMutation: (options?: { onError?: (error: Error) => void }) => { mocks.updateOptions = options ?? null; return { mutate: mocks.update, isPending: false }; } },
       setCurrentCampus: { useMutation: () => ({ mutate: mocks.setCurrentCampus, isPending: false }) },
     },
   },
@@ -48,5 +49,15 @@ describe("persistent Settings editor", () => {
 
     await user.click(screen.getByRole("button", { name: "Save settings" }));
     expect(mocks.update).toHaveBeenCalledWith({ campusId: 13, organization: { name: "Northstar Learning Trust", email: "admin@northstar.edu", phone: "+1 555 0100", address: "1 Academy Way" }, campus: { name: "South Campus", code: "SOUTH", phone: "+1 555 0102", address: "2 South Avenue" }, session: { name: "", startsOn: "", endsOn: "" } });
+  });
+
+  it("shows a clear error when saving settings fails", async () => {
+    render(<Settings />);
+
+    await waitFor(() => expect(screen.getByLabelText("School name")).toHaveValue("Northstar Academy"));
+    mocks.updateOptions?.onError?.(new Error("The selected campus does not belong to this school."));
+
+    const { toast } = await import("sonner");
+    expect(toast.error).toHaveBeenCalledWith("The selected campus does not belong to this school.");
   });
 });

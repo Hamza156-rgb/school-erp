@@ -311,7 +311,7 @@ export function Settings() {
   const { user } = useAuth();
   const settingsQuery = trpc.settings.get.useQuery();
   const utils = trpc.useUtils();
-  const updateSettings = trpc.settings.update.useMutation({ onSuccess: async () => { await utils.settings.get.invalidate(); toast.success("School settings saved."); } });
+  const updateSettings = trpc.settings.update.useMutation({ onSuccess: async () => { await utils.settings.get.invalidate(); toast.success("School settings saved."); }, onError: error => toast.error(error.message || "School settings could not be saved.") });
   const setCurrentCampus = trpc.settings.setCurrentCampus.useMutation({ onSuccess: async () => { await utils.auth.me.invalidate(); await utils.settings.get.invalidate(); toast.success("Primary campus preference saved."); }, onError: error => toast.error(error.message) });
   const [form, setForm] = useState<SettingsForm>(emptySettingsForm);
 

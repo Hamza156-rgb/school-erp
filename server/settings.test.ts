@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { schoolSettingsInputSchema, appRouter } from "./routers";
+import { assertCampusBelongsToOrganization } from "./db";
 import type { TrpcContext } from "./_core/context";
 
 const validSettings = {
@@ -39,5 +40,11 @@ describe("school settings input", () => {
     await expect(caller.settings.get()).rejects.toMatchObject({ code: "UNAUTHORIZED" });
     await expect(caller.settings.setCurrentCampus({ campusId: 12 })).rejects.toMatchObject({ code: "UNAUTHORIZED" });
     await expect(caller.settings.update(validSettings)).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+  });
+
+  it("rejects a campus that is outside the signed-in organization boundary", () => {
+    expect(() => assertCampusBelongsToOrganization({ organizationId: 22 }, 11)).toThrow("The selected campus does not belong to this school.");
+    expect(() => assertCampusBelongsToOrganization(undefined, 11)).toThrow("The selected campus does not belong to this school.");
+    expect(assertCampusBelongsToOrganization({ organizationId: 11 }, 11).organizationId).toBe(11);
   });
 });
