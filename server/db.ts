@@ -1,7 +1,7 @@
-import { and, count, desc, eq, gt, inArray, sql, sum } from "drizzle-orm";
+import { and, asc, count, desc, eq, gt, inArray, like, or, sql, sum } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { nanoid } from "nanoid";
-import { academicSessions, admissions, attendanceRecords, campuses, documents, invoices, notifications, organizations, permissionDefinitions, rolePermissions, students, type InsertUser, type User, users } from "../drizzle/schema";
+import { academicSessions, admissions, attendanceRecords, campuses, classes, documents, guardians, invoices, notifications, organizations, permissionDefinitions, rolePermissions, sections, studentGuardians, students, type InsertUser, type User, users } from "../drizzle/schema";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -225,6 +225,39 @@ export async function updateUserCampus(userId: number, organizationId: number, c
   assertCampusBelongsToOrganization(campus, organizationId);
   await db.update(users).set({ campusId }).where(and(eq(users.id, userId), eq(users.organizationId, organizationId)));
   return campus;
+}
+
+export type StudentListQuery = {
+  organizationId: number;
+  campusId: number | null;
+  search: string;
+  status: "all" | "Current" | "Due";
+  className: string;
+  sortBy: "name-asc" | "name-desc" | "class-asc" | "balance-desc" | "balance-asc" | "status";
+  page: number;
+  pageSize: number;
+};
+
+export async function listStudents(values: StudentListQuery) {
+  const db = await getDb();
+  if (!db) throw new Error("The School ERP database is currently unavailable.");
+  const balanceExpression = sql`coalesce((select sum(${invoices.amount} - ${invoices.paidAmount}) from ${invoices} where ${invoices.studentId} = ${students.id}), 0)`;
+  const dueExpression = sql`exists (select 1 from ${invoices} where ${invoices.studentId} = ${students.id} and (${invoices.amount} - ${invoices.paidAmount}) > 0)`;
+  const campusFilter = and(eq(campuses.organizationId, values.organizationId), values.campusId ? eq(students.campusId, values.campusId) : undefined);
+  const searchFilter = values.search.trim()
+    ? or(like(students.firstName, `%${values.search.trim()}%`), like(students.lastName, `%${values.search.trim()}%`), like(students.admissionNumber, `%${values.search.trim()}%`), like(guardians.name, `%${values.search.trim()}%`))
+    : undefined;
+  const statusFilter = values.status === "Due" ? dueExpression : values.status === "Current" ? sql`not (${dueExpression})` : undefined;
+  const classFilter = values.className !== "all" ? sql`concat(${classes.name}, ' · ', ${sections.name}) = ${values.className}` : undefined;
+  const where = and(campusFilter, classFilter, searchFilter, statusFilter);
+  const orderBy = values.sortBy === "name-desc" ? desc(students.lastName) : values.sortBy === "class-asc" ? asc(classes.name) : values.sortBy === "balance-desc" ? desc(balanceExpression) : values.sortBy === "balance-asc" ? asc(balanceExpression) : values.sortBy === "status" ? asc(students.status) : asc(students.lastName);
+  const [rows, totalRows, classRows] = await Promise.all([
+    db.select({ id: students.id, admissionNumber: students.admissionNumber, firstName: students.firstName, lastName: students.lastName, photoUrl: students.photoUrl, status: students.status, className: classes.name, sectionName: sections.name, guardian: guardians.name, balance: balanceExpression }).from(students).innerJoin(campuses, eq(students.campusId, campuses.id)).leftJoin(sections, eq(students.sectionId, sections.id)).leftJoin(classes, eq(sections.classId, classes.id)).leftJoin(studentGuardians, and(eq(studentGuardians.studentId, students.id), eq(studentGuardians.isPrimary, true))).leftJoin(guardians, eq(studentGuardians.guardianId, guardians.id)).where(where).orderBy(orderBy, asc(students.firstName)).limit(values.pageSize).offset((values.page - 1) * values.pageSize),
+    db.select({ total: count() }).from(students).innerJoin(campuses, eq(students.campusId, campuses.id)).leftJoin(sections, eq(students.sectionId, sections.id)).leftJoin(classes, eq(sections.classId, classes.id)).leftJoin(studentGuardians, and(eq(studentGuardians.studentId, students.id), eq(studentGuardians.isPrimary, true))).leftJoin(guardians, eq(studentGuardians.guardianId, guardians.id)).where(where),
+    db.selectDistinct({ className: classes.name, sectionName: sections.name }).from(students).innerJoin(campuses, eq(students.campusId, campuses.id)).leftJoin(sections, eq(students.sectionId, sections.id)).leftJoin(classes, eq(sections.classId, classes.id)).where(campusFilter).orderBy(asc(classes.name)),
+  ]);
+  const total = Number(totalRows[0]?.total ?? 0);
+  return { rows: rows.map(row => ({ ...row, name: `${row.firstName} ${row.lastName}`, className: row.className ? `${row.className}${row.sectionName ? ` · ${row.sectionName}` : ""}` : "Unassigned", guardian: row.guardian ?? "No guardian linked", balance: Number(row.balance ?? 0), status: Number(row.balance ?? 0) > 0 ? "Due" as const : "Current" as const })), total, page: values.page, pageSize: values.pageSize, totalPages: Math.max(1, Math.ceil(total / values.pageSize)), classOptions: classRows.map(row => row.className ? `${row.className}${row.sectionName ? ` · ${row.sectionName}` : ""}` : "Unassigned") };
 }
 
 export async function getDashboardSummary(organizationId: number, campusId: number | null) {

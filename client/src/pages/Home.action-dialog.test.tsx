@@ -36,6 +36,7 @@ vi.mock("@/lib/trpc", () => ({
     settings: {
       get: { useQuery: () => ({ data: { campuses: [{ id: 12, name: "North Campus" }], selectedCampusId: 12, currentSession: { name: "2025–26" } }, isLoading: false }) },
     },
+    students: { list: { useQuery: () => ({ data: { rows: [], total: 0, totalPages: 1, classOptions: [] }, isLoading: false, isFetching: false, isError: false, refetch: vi.fn() }) } },
   },
 }));
 

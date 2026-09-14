@@ -12,6 +12,7 @@ import {
   getDashboardSummary,
   getSchoolSettings,
   listPermissionDefinitions,
+  listStudents,
   getUserByEmail,
   getUserByValidResetToken,
   getUserByVerificationToken,
@@ -53,6 +54,15 @@ export const schoolSettingsInputSchema = z.object({
     refinementContext.addIssue({ code: z.ZodIssueCode.custom, path: ["session", "endsOn"], message: "The end date must be after the start date." });
   }
 });
+
+export const studentListInputSchema = z.object({
+  search: z.string().trim().max(120).default(""),
+  status: z.enum(["all", "Current", "Due"]).default("all"),
+  className: z.string().trim().max(100).default("all"),
+  sortBy: z.enum(["name-asc", "name-desc", "class-asc", "balance-desc", "balance-asc", "status"]).default("name-asc"),
+  page: z.number().int().positive().default(1),
+  pageSize: z.number().int().min(1).max(100).default(25),
+}).strict();
 
 const accountSummary = (user: { id: number; uid: string; name: string; email: string; role: UserRole; emailVerified: boolean; organizationId: number; campusId: number | null }) => ({
   id: user.id,
@@ -206,6 +216,11 @@ export const appRouter = router({
         const settings = await updateSchoolSettings({ organizationId: ctx.user.organizationId, campusId: input.campusId, organization: input.organization, campus: input.campus, session: input.session.name && input.session.startsOn && input.session.endsOn ? { name: input.session.name, startsOn: toUtcDate(input.session.startsOn), endsOn: toUtcDate(input.session.endsOn) } : undefined });
         return { success: true as const, settings };
       }),
+  }),
+  students: router({
+    list: protectedProcedure
+      .input(studentListInputSchema)
+      .query(({ ctx, input }) => listStudents({ ...input, organizationId: ctx.user.organizationId, campusId: ctx.user.campusId })),
   }),
 });
 
