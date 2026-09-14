@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 import React from "react";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -62,12 +62,18 @@ describe("Students filtering, sorting, and pagination", () => {
     expect(screen.queryByText("Noor Zaman")).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Next page" }));
+    expect(screen.getByRole("status")).toHaveTextContent("Loading student records");
+    expect(screen.getAllByRole("row", { name: "Loading student" })).toHaveLength(2);
+    expect(screen.getByRole("button", { name: "Next page" })).toBeDisabled();
+    await waitFor(() => expect(screen.queryByRole("status")).not.toBeInTheDocument(), { timeout: 500 });
     expect(resultRange("3–4", 5)).toBeInTheDocument();
     expect(screen.getByText("Page 2 of 3")).toBeInTheDocument();
     expect(screen.getByText("Noor Zaman")).toBeInTheDocument();
     expect(screen.getByText("Olivia Anderson")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Next page" }));
+    expect(screen.getByRole("status")).toHaveTextContent("Loading student records");
+    await waitFor(() => expect(screen.queryByRole("status")).not.toBeInTheDocument(), { timeout: 500 });
     expect(resultRange("5–5", 5)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Next page" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Previous page" })).not.toBeDisabled();
