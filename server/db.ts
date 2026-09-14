@@ -1,7 +1,7 @@
-import { and, count, desc, eq, gt, sql, sum } from "drizzle-orm";
+import { and, count, desc, eq, gt, inArray, sql, sum } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { nanoid } from "nanoid";
-import { admissions, attendanceRecords, campuses, documents, invoices, notifications, organizations, permissionDefinitions, rolePermissions, students, type InsertUser, type User, users } from "../drizzle/schema";
+import { academicSessions, admissions, attendanceRecords, campuses, documents, invoices, notifications, organizations, permissionDefinitions, rolePermissions, students, type InsertUser, type User, users } from "../drizzle/schema";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -171,6 +171,55 @@ export async function createPermissionDefinition(values: typeof permissionDefini
   const db = await getDb();
   if (!db) throw new Error("The School ERP database is currently unavailable.");
   await db.insert(permissionDefinitions).values(values).onDuplicateKeyUpdate({ set: { module: values.module, action: values.action, label: values.label, description: values.description } });
+}
+
+export async function getSchoolSettings(organizationId: number, preferredCampusId: number | null, userId?: number) {
+  const db = await getDb();
+  if (!db) throw new Error("The School ERP database is currently unavailable.");
+  const organization = (await db.select().from(organizations).where(eq(organizations.id, organizationId)).limit(1))[0];
+  if (!organization) throw new Error("The school organization could not be found.");
+  const freshUser = userId ? (await db.select({ campusId: users.campusId }).from(users).where(and(eq(users.id, userId), eq(users.organizationId, organizationId))).limit(1))[0] : undefined;
+  const effectiveCampusId = freshUser?.campusId ?? preferredCampusId;
+  const organizationCampuses = await db.select().from(campuses).where(eq(campuses.organizationId, organizationId)).orderBy(campuses.id);
+  const selectedCampus = organizationCampuses.find(campus => campus.id === effectiveCampusId) ?? organizationCampuses[0] ?? null;
+  const currentSessions = organizationCampuses.length
+    ? await db.select().from(academicSessions).where(and(inArray(academicSessions.campusId, organizationCampuses.map(campus => campus.id)), eq(academicSessions.isCurrent, true))).orderBy(desc(academicSessions.id))
+    : [];
+  const currentSession = currentSessions.find(session => session.campusId === selectedCampus?.id) ?? null;
+  return { organization, campuses: organizationCampuses, selectedCampusId: selectedCampus?.id ?? null, currentSession, currentSessions };
+}
+
+export async function updateSchoolSettings(values: {
+  organizationId: number;
+  campusId: number;
+  organization: Pick<typeof organizations.$inferInsert, "name" | "email" | "phone" | "address">;
+  campus: Pick<typeof campuses.$inferInsert, "name" | "code" | "phone" | "address">;
+  session?: { name: string; startsOn: Date; endsOn: Date };
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("The School ERP database is currently unavailable.");
+  const campus = (await db.select().from(campuses).where(and(eq(campuses.id, values.campusId), eq(campuses.organizationId, values.organizationId))).limit(1))[0];
+  if (!campus) throw new Error("The selected campus does not belong to this school.");
+  await db.update(organizations).set(values.organization).where(eq(organizations.id, values.organizationId));
+  await db.update(campuses).set(values.campus).where(and(eq(campuses.id, values.campusId), eq(campuses.organizationId, values.organizationId)));
+  if (values.session) {
+    const currentSessions = await db.select().from(academicSessions).where(and(eq(academicSessions.campusId, values.campusId), eq(academicSessions.isCurrent, true))).orderBy(desc(academicSessions.id)).limit(1);
+    if (currentSessions[0]) {
+      await db.update(academicSessions).set({ name: values.session.name, startsOn: values.session.startsOn, endsOn: values.session.endsOn, isCurrent: true }).where(eq(academicSessions.id, currentSessions[0].id));
+    } else {
+      await db.insert(academicSessions).values({ campusId: values.campusId, name: values.session.name, startsOn: values.session.startsOn, endsOn: values.session.endsOn, isCurrent: true });
+    }
+  }
+  return getSchoolSettings(values.organizationId, values.campusId);
+}
+
+export async function updateUserCampus(userId: number, organizationId: number, campusId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("The School ERP database is currently unavailable.");
+  const campus = (await db.select().from(campuses).where(and(eq(campuses.id, campusId), eq(campuses.organizationId, organizationId))).limit(1))[0];
+  if (!campus) throw new Error("The selected campus does not belong to this school.");
+  await db.update(users).set({ campusId }).where(and(eq(users.id, userId), eq(users.organizationId, organizationId)));
+  return campus;
 }
 
 export async function getDashboardSummary(organizationId: number, campusId: number | null) {

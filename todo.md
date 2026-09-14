@@ -69,3 +69,9 @@
 - [x] QA follow-up: Exercise the rendered mobile drawer open, overlay dismissal, and Escape-key dismissal behavior.
 - [x] QA follow-up: Exercise the rendered sidebar account trigger and verify its menu items appear without changing the active workspace view.
 - [x] QA follow-up: Replace source-string-only responsive assertions with true jsdom interaction coverage.
+- [ ] Add a tenant-scoped school settings record with editable school identity and academic-session preferences.
+- [ ] Add tenant-scoped campus persistence with a primary-campus selector and editable campus details.
+- [ ] Add protected settings read/update procedures with organization isolation and validation.
+- [ ] Build the responsive Settings UI with loading, save, error, and success feedback.
+- [ ] Add server and client regression coverage for settings persistence and tenant boundaries.
+- [ ] Validate settings at mobile and desktop breakpoints, then run type checks, tests, and production build.

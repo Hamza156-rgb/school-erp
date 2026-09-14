@@ -10,12 +10,15 @@ import {
   getInAppNotifications,
   getRolePermissionGrants,
   getDashboardSummary,
+  getSchoolSettings,
   listPermissionDefinitions,
   getUserByEmail,
   getUserByValidResetToken,
   getUserByVerificationToken,
   markNotificationRead,
   setRolePermissionGrant,
+  updateSchoolSettings,
+  updateUserCampus,
   updateUserSecurity,
 } from "./db";
 import {
@@ -34,6 +37,22 @@ import { storagePut } from "./storage";
 import { sendSchoolEmail } from "./email";
 
 const passwordSchema = z.string().min(10, "Use at least 10 characters.").max(128);
+const calendarDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use a valid calendar date.");
+const toUtcDate = (value: string) => new Date(`${value}T00:00:00.000Z`);
+
+export const schoolSettingsInputSchema = z.object({
+  campusId: z.number().int().positive(),
+  organization: z.object({ name: z.string().trim().min(2).max(180), email: z.string().trim().email().max(320), phone: z.string().trim().max(40), address: z.string().trim().max(2000) }).strict(),
+  campus: z.object({ name: z.string().trim().min(2).max(180), code: z.string().trim().min(1).max(32), phone: z.string().trim().max(40), address: z.string().trim().max(2000) }).strict(),
+  session: z.object({ name: z.string().trim().max(80), startsOn: z.union([calendarDateSchema, z.literal("")]), endsOn: z.union([calendarDateSchema, z.literal("")]) }).strict(),
+}).strict().superRefine((input, refinementContext) => {
+  const sessionValues = [input.session.name, input.session.startsOn, input.session.endsOn];
+  if (sessionValues.some(Boolean) && sessionValues.some(value => !value)) {
+    refinementContext.addIssue({ code: z.ZodIssueCode.custom, path: ["session"], message: "Complete the session name, start date, and end date together." });
+  } else if (input.session.startsOn && input.session.endsOn && toUtcDate(input.session.endsOn) <= toUtcDate(input.session.startsOn)) {
+    refinementContext.addIssue({ code: z.ZodIssueCode.custom, path: ["session", "endsOn"], message: "The end date must be after the start date." });
+  }
+});
 
 const accountSummary = (user: { id: number; uid: string; name: string; email: string; role: UserRole; emailVerified: boolean; organizationId: number; campusId: number | null }) => ({
   id: user.id,
@@ -177,6 +196,16 @@ export const appRouter = router({
   }),
   dashboard: router({
     summary: protectedProcedure.query(({ ctx }) => getDashboardSummary(ctx.user.organizationId, ctx.user.campusId)),
+  }),
+  settings: router({
+    get: protectedProcedure.query(({ ctx }) => getSchoolSettings(ctx.user.organizationId, ctx.user.campusId, ctx.user.id)),
+    setCurrentCampus: protectedProcedure.input(z.object({ campusId: z.number().int().positive() })).mutation(async ({ ctx, input }) => { await updateUserCampus(ctx.user.id, ctx.user.organizationId, input.campusId); return { success: true as const, campusId: input.campusId }; }),
+    update: adminProcedure
+      .input(schoolSettingsInputSchema)
+      .mutation(async ({ ctx, input }) => {
+        const settings = await updateSchoolSettings({ organizationId: ctx.user.organizationId, campusId: input.campusId, organization: input.organization, campus: input.campus, session: input.session.name && input.session.startsOn && input.session.endsOn ? { name: input.session.name, startsOn: toUtcDate(input.session.startsOn), endsOn: toUtcDate(input.session.endsOn) } : undefined });
+        return { success: true as const, settings };
+      }),
   }),
 });
 

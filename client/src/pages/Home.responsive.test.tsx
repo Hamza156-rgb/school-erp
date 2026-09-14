@@ -31,6 +31,14 @@ vi.mock("@/_core/hooks/useAuth", () => ({
   useAuth: () => ({ logout: vi.fn() }),
 }));
 
+vi.mock("@/lib/trpc", () => ({
+  trpc: {
+    settings: {
+      get: { useQuery: () => ({ data: { campuses: [{ id: 12, name: "South Campus" }], selectedCampusId: 12, currentSession: { name: "2026–27" } }, isLoading: false }) },
+    },
+  },
+}));
+
 class ResizeObserverMock {
   observe() {}
   unobserve() {}
@@ -47,6 +55,13 @@ afterEach(() => {
 });
 
 describe("responsive workspace interactions", () => {
+  it("renders the selected campus and academic session from persisted settings", () => {
+    render(<Home />);
+
+    expect(screen.getByText("South Campus")).toBeInTheDocument();
+    expect(screen.getByText("2026–27")).toBeInTheDocument();
+  });
+
   it("opens the mobile navigation and dismisses it from the overlay and Escape", async () => {
     const user = userEvent.setup();
     render(<Home />);

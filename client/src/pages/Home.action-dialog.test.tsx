@@ -31,6 +31,14 @@ vi.mock("@/_core/hooks/useAuth", () => ({
   useAuth: () => ({ logout: vi.fn() }),
 }));
 
+vi.mock("@/lib/trpc", () => ({
+  trpc: {
+    settings: {
+      get: { useQuery: () => ({ data: { campuses: [{ id: 12, name: "North Campus" }], selectedCampusId: 12, currentSession: { name: "2025–26" } }, isLoading: false }) },
+    },
+  },
+}));
+
 class ResizeObserverMock {
   observe() {}
   unobserve() {}
