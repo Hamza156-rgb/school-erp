@@ -14,23 +14,23 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe("Students filtering and sorting", () => {
-  const resultCount = (count: number) => screen.getByText((_, element) => element?.tagName === "P" && element.textContent === `Showing ${count} of 5 demo records`);
+describe("Students filtering, sorting, and pagination", () => {
+  const resultRange = (range: string, count: number) => screen.getByText((_, element) => element?.tagName === "P" && element.textContent === `Showing ${range} of ${count} matching demo records`);
 
-  it("filters records by status and class while updating the result count", async () => {
+  it("filters records by status and class while updating the result range", async () => {
     const user = userEvent.setup();
     render(<Students addStudent={vi.fn()} />);
 
-    expect(resultCount(5)).toBeInTheDocument();
+    expect(resultRange("1–5", 5)).toBeInTheDocument();
     await user.selectOptions(screen.getByLabelText("Filter by status"), "Due");
 
-    expect(resultCount(2)).toBeInTheDocument();
+    expect(resultRange("1–2", 2)).toBeInTheDocument();
     expect(screen.getByText("Sana Kapoor")).toBeInTheDocument();
     expect(screen.getByText("Noor Zaman")).toBeInTheDocument();
     expect(screen.queryByText("Aarav Mehta")).not.toBeInTheDocument();
 
     await user.selectOptions(screen.getByLabelText("Filter by class"), "Grade 8 · B");
-    expect(resultCount(1)).toBeInTheDocument();
+    expect(resultRange("1–1", 1)).toBeInTheDocument();
     expect(screen.getByText("Noor Zaman")).toBeInTheDocument();
     expect(screen.queryByText("Sana Kapoor")).not.toBeInTheDocument();
   });
@@ -44,9 +44,32 @@ describe("Students filtering and sorting", () => {
     expect(names.slice(0, 3)).toEqual(["Sana Kapoor", "Noor Zaman", "Aarav Mehta"]);
 
     await user.type(screen.getByLabelText("Search students"), "Noor");
-    expect(resultCount(1)).toBeInTheDocument();
+    expect(resultRange("1–1", 1)).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Clear" }));
-    expect(resultCount(5)).toBeInTheDocument();
+    expect(resultRange("1–5", 5)).toBeInTheDocument();
     expect(screen.getByLabelText("Sort students")).toHaveValue("name-asc");
+  });
+
+  it("moves between pages and keeps the active page size visible", async () => {
+    const user = userEvent.setup();
+    render(<Students addStudent={vi.fn()} />);
+
+    await user.selectOptions(screen.getByLabelText("Rows per page"), "2");
+    expect(resultRange("1–2", 5)).toBeInTheDocument();
+    expect(screen.getByText("Page 1 of 3")).toBeInTheDocument();
+    expect(screen.getByText("Aarav Mehta")).toBeInTheDocument();
+    expect(screen.getByText("James Edwards")).toBeInTheDocument();
+    expect(screen.queryByText("Noor Zaman")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Next page" }));
+    expect(resultRange("3–4", 5)).toBeInTheDocument();
+    expect(screen.getByText("Page 2 of 3")).toBeInTheDocument();
+    expect(screen.getByText("Noor Zaman")).toBeInTheDocument();
+    expect(screen.getByText("Olivia Anderson")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Next page" }));
+    expect(resultRange("5–5", 5)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Next page" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Previous page" })).not.toBeDisabled();
   });
 });
